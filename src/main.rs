@@ -28,7 +28,6 @@ struct IncidentAction {
 #[async_trait]
 impl EventHandler for Bot {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        log::info!("Interaction: {:?}", interaction);
         let interaction = interaction.as_application_command();
         if interaction.is_none() {
             return;
@@ -80,7 +79,7 @@ impl EventHandler for Bot {
         guild: serenity::model::guild::Guild,
         _is_new: bool,
     ) {
-        log::info!("Guild: {:?}", guild);
+        log::info!("Guild: {}", guild.name);
         GUILDS.lock().await.push(guild.id);
     }
 }
@@ -98,7 +97,7 @@ async fn enable_security_actions(guild_id: GuildId) -> Result<bool, Error> {
     };
 
     let res = client
-        .post(&url)
+        .put(&url)
         .header("Authorization", format!("Bot {}", token))
         .json(&body)
         .send()
@@ -109,6 +108,7 @@ async fn enable_security_actions(guild_id: GuildId) -> Result<bool, Error> {
     if json.dms_disabled_until.is_some() {
         log::info!("Enabled security actions for guild {}", guild_id.0);
     } else {
+        dbg!(json);
         log::error!("Failed to enable security actions for guild {}", guild_id.0);
         return Ok(false);
     }
@@ -145,21 +145,17 @@ async fn main() {
         .await
         .expect("Err creating client");
 
-    /*tokio::task::spawn(async move {
-        for guild in GUILDS.lock().await.iter() {
-            let res = enable_security_actions(*guild).await;
-            if res.is_err() || !res.as_ref().unwrap() {
-                log::error!("Failed to enable security actions for guild {}", guild.0);
-                if res.is_err() {
-                    log::error!("{:?}", res.unwrap_err());
-                }
+    tokio::task::spawn(async move {
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+            let guilds = GUILDS.lock().await;
+            for guild in guilds.iter() {
+                enable_security_actions(*guild).await.ok();
+                tokio::time::sleep(tokio::time::Duration::from_secs(/* 12 hours */ 43200)).await;
             }
-            log::info!("Enabled security actions for guild {}", guild.0);
-
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            drop(guilds);
         }
-        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
     });
 
-    client.start_autosharded().await.unwrap();*/
+    client.start_autosharded().await.unwrap();
 }
