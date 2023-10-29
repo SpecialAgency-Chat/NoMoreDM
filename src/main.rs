@@ -147,11 +147,11 @@ async fn main() {
 
     tokio::task::spawn(async move {
         loop {
-            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(/* 12 hours */ 43200)).await;
             let guilds = GUILDS.lock().await;
             for guild in guilds.iter() {
                 enable_security_actions(*guild).await.ok();
-                tokio::time::sleep(tokio::time::Duration::from_secs(/* 12 hours */ 43200)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }
             drop(guilds);
         }
