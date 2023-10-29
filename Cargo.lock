@@ -733,7 +733,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "no-dm-forever"
+name = "nomoredm"
 version = "0.1.0"
 dependencies = [
  "chrono",

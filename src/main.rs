@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::env;
+use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 use reqwest::Error;
@@ -13,7 +13,6 @@ use serenity::prelude::*;
 use serenity::utils::Color;
 use serenity::{async_trait, model::prelude::Interaction};
 use tokio::sync::Mutex;
-use tokio_cron_scheduler::{Job, JobScheduler};
 
 struct Bot;
 
@@ -75,7 +74,12 @@ impl EventHandler for Bot {
         .ok();
     }
 
-    async fn guild_create(&self, _ctx: Context, guild: serenity::model::guild::Guild, _is_new: bool) {
+    async fn guild_create(
+        &self,
+        _ctx: Context,
+        guild: serenity::model::guild::Guild,
+        _is_new: bool,
+    ) {
         log::info!("Guild: {:?}", guild);
         GUILDS.lock().await.push(guild.id);
     }
@@ -116,7 +120,7 @@ async fn enable_security_actions(guild_id: GuildId) -> Result<bool, Error> {
 async fn main() {
     dotenvy::dotenv().ok();
     env_logger::builder()
-        .filter_module("no-dm-forever", {
+        .filter_module("nomoredm", {
             if cfg!(debug_assertions) {
                 log::LevelFilter::Trace
             } else {
@@ -124,7 +128,8 @@ async fn main() {
             }
         })
         .init();
-    let sched = JobScheduler::new().await.unwrap();
+
+    log::info!("Starting NoMoreDM");
 
     let token = if let Some(token) = env::var("DISCORD_TOKEN").ok() {
         token
@@ -139,29 +144,22 @@ async fn main() {
         .event_handler(Bot)
         .await
         .expect("Err creating client");
-    
-    sched.add(
-        Job::new_async("1/7 * * * * *", |_uuid, mut _l| {
-            Box::pin(async move {
-                for guild in GUILDS.lock().await.iter() {
-                    let res = enable_security_actions(*guild).await;
-                    if res.is_err() || !res.as_ref().unwrap() {
-                        log::error!("Failed to enable security actions for guild {}", guild.0);
-                        if res.is_err() {
-                            log::error!("{:?}", res.unwrap_err());
-                        }
-                    }
-                    log::info!("Enabled security actions for guild {}", guild.0);
 
-                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    /*tokio::task::spawn(async move {
+        for guild in GUILDS.lock().await.iter() {
+            let res = enable_security_actions(*guild).await;
+            if res.is_err() || !res.as_ref().unwrap() {
+                log::error!("Failed to enable security actions for guild {}", guild.0);
+                if res.is_err() {
+                    log::error!("{:?}", res.unwrap_err());
                 }
-            })
-        })
-        .unwrap()
-    ).await.unwrap();
+            }
+            log::info!("Enabled security actions for guild {}", guild.0);
 
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        }
+        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+    });
 
-    sched.start().await.unwrap();
-
-    client.start_autosharded().await.unwrap();
+    client.start_autosharded().await.unwrap();*/
 }
