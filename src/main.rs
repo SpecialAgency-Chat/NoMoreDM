@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::env;
 use std::sync::Arc;
 
@@ -17,7 +18,7 @@ use tokio::sync::Mutex;
 struct Bot;
 
 static TOKEN: Lazy<Arc<Mutex<String>>> = Lazy::new(|| Arc::new(Mutex::new(String::new())));
-static GUILDS: Lazy<Arc<Mutex<Vec<GuildId>>>> = Lazy::new(|| Arc::new(Mutex::new(Vec::new())));
+static GUILDS: Lazy<Arc<Mutex<HashSet<GuildId>>>> = Lazy::new(|| Arc::new(Mutex::new(HashSet::new())));
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct IncidentAction {
@@ -80,7 +81,7 @@ impl EventHandler for Bot {
         _is_new: bool,
     ) {
         log::info!("Guild: {}", guild.name);
-        GUILDS.lock().await.push(guild.id);
+        GUILDS.lock().await.insert(guild.id);
     }
 }
 
